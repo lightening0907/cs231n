@@ -1,5 +1,6 @@
 import numpy as np
 from random import shuffle
+import pdb
 
 def softmax_loss_naive(W, X, y, reg):
   """
@@ -22,6 +23,9 @@ def softmax_loss_naive(W, X, y, reg):
   # Initialize the loss and gradient to zero.
   loss = 0.0
   dW = np.zeros_like(W)
+  num_train = X.shape[0]
+  num_class = W.shape[1]
+
 
   #############################################################################
   # TODO: Compute the softmax loss and its gradient using explicit loops.     #
@@ -29,7 +33,21 @@ def softmax_loss_naive(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  for i in xrange(num_train):
+    h = np.exp(X[i,:].dot(W[:,y[i]]))/np.sum(np.exp(X[i,:].dot(W)))
+    loss -= np.log(h)
+    for j in xrange(num_class):
+      if j == y[i]:
+        dW[:,j] += -X[i,:].T*(1-h)
+      else:
+        dW[:,j] += X[i,:].T * np.exp(X[i,:].dot(W[:,j]))/np.sum(np.exp(X[i,:].dot(W)))
+  loss /= num_train
+  dW /= num_train
+  loss += 0.5*reg*np.sum(W*W)
+  dW += reg*W
+
+
+
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
@@ -46,6 +64,10 @@ def softmax_loss_vectorized(W, X, y, reg):
   # Initialize the loss and gradient to zero.
   loss = 0.0
   dW = np.zeros_like(W)
+  num_train = X.shape[0]
+  num_dim = X.shape[1]
+  num_classes = W.shape[1]
+  i = np.arange(num_train)
 
   #############################################################################
   # TODO: Compute the softmax loss and its gradient using no explicit loops.  #
@@ -53,7 +75,18 @@ def softmax_loss_vectorized(W, X, y, reg):
   # here, it is easy to run into numeric instability. Don't forget the        #
   # regularization!                                                           #
   #############################################################################
-  pass
+  f = X.dot(W)
+  loss = -np.sum(np.log(np.exp(f[i,y])/np.sum(np.exp(f),axis = 1)))
+  mask = np.zeros((num_train,num_classes))
+  mask[i,y] = 1
+  #pdb.set_trace()
+  dW = X.T.dot(((np.exp(f)/np.sum(np.exp(f),axis = 1)[:,np.newaxis])-mask))
+  loss /= num_train
+  dW  /= num_train
+  loss += 0.5*reg*np.sum(W*W)
+  dW += reg*W
+
+
   #############################################################################
   #                          END OF YOUR CODE                                 #
   #############################################################################
