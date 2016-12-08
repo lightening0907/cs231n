@@ -96,7 +96,7 @@ def hog_feature(im):
 
   gx = np.zeros(image.shape)
   gy = np.zeros(image.shape)
-  gx[:, :-1] = np.diff(image, n=1, axis=1) # compute gradient on x-direction
+  gx[:, :-1] = np.diff(image, n=1, axis=1)Done # compute gradient on x-direction
   gy[:-1, :] = np.diff(image, n=1, axis=0) # compute gradient on y-direction
   grad_mag = np.sqrt(gx ** 2 + gy ** 2) # gradient magnitude
   grad_ori = np.arctan2(gy, (gx + 1e-15)) * (180 / np.pi) + 90 # gradient orientation
