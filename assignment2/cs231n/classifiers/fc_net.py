@@ -91,7 +91,7 @@ class TwoLayerNet(object):
     for layer in xrange(1,3):
       params_w,params_b = self.params['W%s'%str(layer)],self.params['b%s'%str(layer)]
       if layer==1:
-        input_x = X
+        input_x = X        
         aff_relu_f_out[layer],aff_relu_f_cache[layer] = affine_relu_forward(input_x,params_w,params_b)
       else:
         input_x = aff_relu_f_out[layer-1]
@@ -208,11 +208,13 @@ class FullyConnectedNet(object):
       else:
         param_d1,param_d2 = hidden_dims[i-2],num_classes
 
-
+      
       self.params['W%d'%i] = np.random.normal(0,weight_scale,(param_d1,param_d2))
       self.params['b%d'%i] = np.zeros(param_d2)
-      # self.params['gamma%d'%i]=np.ones(param_d2)
-      # self.params['beta%d'%i]=np.zeros(param_d2)
+      if self.use_batchnorm and i < self.num_layers:
+        self.params['gamma%d'%i]=np.ones(param_d2)
+        self.params['beta%d'%i]=np.zeros(param_d2)
+      
 
     ############################################################################
     #                             END OF YOUR CODE                             #
@@ -277,7 +279,10 @@ class FullyConnectedNet(object):
         input_x = X
       else:
         input_x = affine_relu_f[i-1][0]
-      affine_relu_f[i] = affine_relu_forward(input_x,self.params['W%d'%i],self.params['b%d'%i])
+      if self.use_batchnorm:
+        affine_relu_f[i] = affine_bn_relu_forward(input_x,self.params['W%d'%i],self.params['b%d'%i],self.params['gamma%d'%i],self.params['beta%d'%i],self.bn_params[i-1])
+      else:
+        affine_relu_f[i] = affine_relu_forward(input_x,self.params['W%d'%i],self.params['b%d'%i])
     affine_relu_f[self.num_layers] = affine_forward(affine_relu_f[self.num_layers-1][0],self.params['W%d'%self.num_layers],self.params['b%d'%self.num_layers])
     scores = affine_relu_f[self.num_layers][0]
     ############################################################################
@@ -310,10 +315,18 @@ class FullyConnectedNet(object):
       if i == self.num_layers:
         affine_relu_b[self.num_layers] = affine_backward(dx_loss,affine_relu_f[self.num_layers][1])
       else:
-        affine_relu_b[i] = affine_relu_backward(affine_relu_b[i+1][0],affine_relu_f[i][1])
+        if self.use_batchnorm:
+          affine_relu_b[i] = affine_bn_relu_backward(affine_relu_b[i+1][0],affine_relu_f[i][1])
+          grads['gamma%d'%i] = affine_relu_b[i][3]
+          grads['beta%d'%i] = affine_relu_b[i][4]
+        else:  
+          affine_relu_b[i] = affine_relu_backward(affine_relu_b[i+1][0],affine_relu_f[i][1])
+
       loss += 0.5*self.reg*np.sum(self.params['W%d'%i]**2)
       grads['W%d'%i] = affine_relu_b[i][1] + self.reg * self.params['W%d'%i]
       grads['b%d'%i] = affine_relu_b[i][2]
+      
+
 
     ############################################################################
     #                             END OF YOUR CODE                             #
