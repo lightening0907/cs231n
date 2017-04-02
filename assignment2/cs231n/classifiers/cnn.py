@@ -51,15 +51,21 @@ class ThreeLayerConvNet(object):
     
     self.params['W1'] = np.random.normal(scale=weight_scale,size=(num_filters,C,filter_size,filter_size))
     self.params['b1'] = np.zeros(num_filters)
+    self.params['gamma1'] = np.ones(num_filters)
+    self.params['beta1'] = np.zeros(num_filters)
     self.params['W2'] = np.random.normal(scale=weight_scale,size=(num_filters*H*W/4,hidden_dim))
     self.params['b2'] = np.zeros(hidden_dim)
+    self.params['gamma2'] = np.ones(hidden_dim)
+    self.params['beta2'] = np.zeros(hidden_dim)
     self.params['W3'] = np.random.normal(scale=weight_scale,size=(hidden_dim,num_classes))
     self.params['b3'] = np.zeros(num_classes)
+
+    self.bn_params = [{'mode': 'train'} for i in xrange(2)]
 
     ############################################################################
     #                             END OF YOUR CODE                             #
     ############################################################################
-
+   
     for k, v in self.params.iteritems():
       self.params[k] = v.astype(dtype)
      
@@ -88,8 +94,10 @@ class ThreeLayerConvNet(object):
     # variable.                                                                #
     ############################################################################
     crp_out,crp_cache = conv_relu_pool_forward(X,W1,b1,conv_param,pool_param)
-    arf_out,afr_cache = affine_relu_forward(crp_out,W2,b2)
-    af_out,af_cache = affine_forward(arf_out,W3,b3)
+    crp_bn_out,crp_bn_cache = spatial_batchnorm_forward(crp_out,self.params['gamma1'],self.params['beta1'],self.bn_params[0])
+    arf_out,afr_cache = affine_relu_forward(crp_bn_out,W2,b2)
+    arf_bn_out,afr_bn_cache = batchnorm_foward(aff_out,self.params['gamma2'],self.params['beta2'],self.bn_params[1])
+    af_out,af_cache = affine_forward(arf_bn_out,W3,b3)
     scores = af_out
     ############################################################################
     #                             END OF YOUR CODE                             #
@@ -107,7 +115,9 @@ class ThreeLayerConvNet(object):
     ############################################################################
     loss, dx_loss = softmax_loss(af_out,y)
     dx_af,grads['W3'],grads['b3'] = affine_backward(dx_loss,af_cache)
-    dx_afr,grads['W2'],grads['b2'] = affine_relu_backward(dx_af,afr_cache)
+    dx_af_bn,grads['gamma2'],grads['beta2'] = batchnorm_backward(dx_af,afr_bn_cache)
+    dx_afr,grads['W2'],grads['b2'] = affine_relu_backward(dx_af_bn,afr_cache)
+    dx_afr_bn,grads['gamma1'],grads['beta1'] = spatial_batchnorm_backward(dx_afr,crp_bn_cache)
     dx_crp,grads['W1'],grads['b1'] = conv_relu_pool_backward(dx_afr,crp_cache)
     loss += (np.sum(W1**2) + np.sum(W2**2) + np.sum(W3**2))*0.5*self.reg
     for i in range(1,4):
